@@ -38,7 +38,7 @@ def char_list_from_file() -> List[str]:
         return list(f.read())
 
 
-def infer(model: Model, fn_img: Path) -> None:
+def infer(model: Model, fn_img: Path, outfile: Path) -> None:
     """Recognizes text in image provided by file path."""
     img = cv2.imread(fn_img, cv2.IMREAD_GRAYSCALE)
     assert img is not None
@@ -48,9 +48,12 @@ def infer(model: Model, fn_img: Path) -> None:
 
     batch = Batch([img], None, 1)
     recognized, probability = model.infer_batch(batch, True)
-    print(f'Recognized: "{recognized[0]}"')
-    print(f'Probability: {probability[0]}')
 
+    with open(outfile, 'w') as f:
+        json.dump({
+            'recognised': recognized[0],
+            'probability': float( probability[0] ),
+        }, f, indent=4)
 
 def parse_args() -> argparse.Namespace:
     """Parses arguments from the command line."""
@@ -60,7 +63,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--img_file', help='Image used for inference.', type=Path, default='../data/word.png')
     parser.add_argument('--dump', help='Dump output of NN to CSV file(s).', action='store_true')
     parser.add_argument('--model-dir', help='Path to model folder.', type=Path, required=True)
-    parser.add_argument('--outdir', help='Path to store prediction to.', type=Path, required=True)
+    parser.add_argument('--outfile', help='Path to store prediction to.', type=Path, required=True)
 
     return parser.parse_args()
 
@@ -77,7 +80,7 @@ def main():
 
     # infer text on test image
     model = Model(char_list_from_file(), decoder_type, must_restore=True, dump=args.dump, model_dir=args.model_dir)
-    infer(model, args.img_file)
+    infer(model, args.img_file, args.outfile)
 
 
 if __name__ == '__main__':
